@@ -96,7 +96,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'privacy' }) 
                 <ul className="list-disc pl-4 space-y-1">
                   <li><strong>Farmer Contact Number:</strong> Solely used for dispatching automated WhatsApp intrusion notifications. Never sold or shared.</li>
                   <li><strong>Field Coordinates:</strong> GPS location of the farm boundary to pinpoint wildlife sighting markers on the map.</li>
-                  <li><strong>Thermal Readings:</strong> Numerical temperature readings ($T_{obj}$, $T_{amb}$) for intrusion classification.</li>
+                  <li><strong>Thermal Readings:</strong> Numerical temperature readings (T-Object and T-Ambient) for intrusion classification.</li>
                 </ul>
               </div>
               <p>

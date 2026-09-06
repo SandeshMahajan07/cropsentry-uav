@@ -365,7 +365,7 @@ export default function LandingPage({ onEnterConsole }) {
               </div>
               <h4 className="font-bold text-sm text-slate-900">Dual-Temperature IR Sensor</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Measures target object temperature ($T_{obj}$) and ambient temperature ($T_{amb}$) simultaneously to compute contrast ($\Delta T$).
+                Measures target object temperature and ambient ground temperature simultaneously to compute differential contrast (&Delta;T).
               </p>
             </div>
 
