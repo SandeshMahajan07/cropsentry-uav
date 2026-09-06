@@ -1,0 +1,12 @@
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+frontend/dist/
+backend/uploads/
+.env
+*.log
+database.sqlite
+database.sqlite-wal
+database.sqlite-shm
+.DS_Store
+Thumbs.db
