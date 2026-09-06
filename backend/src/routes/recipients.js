@@ -53,47 +53,66 @@ router.post('/', (req, res) => {
 
 /**
  * POST /api/v1/recipients/test-alert
- * Trigger an instant test WhatsApp alert to a recipient
+ * Trigger an instant test WhatsApp alert to any user-inputted phone number
  */
 router.post('/test-alert', async (req, res) => {
   try {
-    const { phone_number = '+91 8073222459' } = req.body;
+    const { phone_number = '+91 6360911344' } = req.body;
+    const cleanPhone = phone_number.replace(/[^0-9]/g, '');
 
-    // Get latest detection or create a mock detection
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return res.status(400).json({ error: 'Please provide a valid phone number (at least 10 digits)' });
+    }
+
+    // Auto-register recipient in database if not present
+    const existing = db.prepare('SELECT id FROM alert_recipients WHERE phone_number LIKE ?').get(`%${cleanPhone.slice(-10)}%`);
+    if (!existing) {
+      db.prepare(`
+        INSERT INTO alert_recipients (name, phone_number, active)
+        VALUES (?, ?, 1)
+      `).run(`Farmer (${cleanPhone})`, phone_number);
+    }
+
+    // Get latest detection or fallback
     let latest = db.prepare('SELECT * FROM detections ORDER BY id DESC LIMIT 1').get();
     if (!latest) {
       latest = {
-        id: 999,
+        id: 1,
         drone_id: 'CROPSENTRY_01',
         timestamp: new Date().toISOString(),
-        latitude: 17.329500,
-        longitude: 76.836900,
-        object_temp_celsius: 37.5,
+        latitude: 17.329700,
+        longitude: 76.837100,
+        object_temp_celsius: 37.2,
         ambient_temp_celsius: 22.0,
-        delta: 15.5
+        delta: 15.2
       };
     }
 
     const dispatchResult = await sendAlert(phone_number, latest);
-    const cleanPhone = phone_number.replace(/[^0-9]/g, '');
-    const directWaLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(
-      `🚨 *WILD ANIMAL DETECTED!* — CropSentry UAV\n` +
-      `📍 Location: ${latest.latitude.toFixed(6)}, ${latest.longitude.toFixed(6)}\n` +
-      `🗺️ View on map: https://www.google.com/maps?q=${latest.latitude.toFixed(6)},${latest.longitude.toFixed(6)}\n` +
-      `🌡️ Thermal Reading: ${latest.object_temp_celsius}°C (Delta: +${latest.delta}°C)\n` +
-      `⚡ Deterrent Strobe & Siren Triggered!`
-    )}`;
+
+    const messageText = 
+      `🚨 *WILD ANIMAL DETECTED!* — CropSentry UAV\n\n` +
+      `📅 *Time:* ${new Date(latest.timestamp).toLocaleTimeString('en-IN')} (IST)\n` +
+      `📍 *Location:* ${latest.latitude.toFixed(6)}, ${latest.longitude.toFixed(6)}\n` +
+      `🗺️ *View on Google Maps:* https://www.google.com/maps?q=${latest.latitude.toFixed(6)},${latest.longitude.toFixed(6)}\n` +
+      `🌡️ *Thermal Reading:* ${latest.object_temp_celsius}°C (Ambient: ${latest.ambient_temp_celsius}°C)\n` +
+      `⚡ *Contrast ΔT:* +${latest.delta}°C\n` +
+      `🔔 *Deterrent Status:* Strobe & 110dB Acoustic Siren Fired on Drone.`;
+
+    const directWaLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
 
     return res.json({
-      message: `Alert dispatched to ${phone_number}`,
+      message: `Alert dispatched to +${cleanPhone}`,
       phone: phone_number,
+      clean_phone: cleanPhone,
       status: dispatchResult.status,
       direct_whatsapp_url: directWaLink,
+      message_body: messageText,
       details: dispatchResult.providerResponse
     });
   } catch (err) {
     console.error('[API] POST /recipients/test-alert error:', err);
-    return res.status(500).json({ error: 'Failed to send test alert', message: err.message });
+    return res.status(500).json({ error: 'Failed to send alert simulation', message: err.message });
   }
 });
 

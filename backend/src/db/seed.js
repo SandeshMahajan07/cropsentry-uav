@@ -21,14 +21,14 @@ export function seedData() {
     `).run(new Date().toISOString());
   }
 
-  // Ensure User's Phone Number (+91 8073222459) is registered as primary alert recipient
-  const userRecipient = db.prepare('SELECT id FROM alert_recipients WHERE phone_number LIKE ?').get('%8073222459%');
+  // Ensure User's Phone Number (+91 6360911344) is registered as primary alert recipient
+  const userRecipient = db.prepare('SELECT id FROM alert_recipients WHERE phone_number LIKE ?').get('%6360911344%');
   if (!userRecipient) {
     db.prepare(`
       INSERT INTO alert_recipients (name, phone_number, active)
-      VALUES ('Primary Field Owner', '+91 8073222459', 1)
+      VALUES ('Primary Field Owner', '+91 6360911344', 1)
     `).run();
-    console.log('[Seed] Added user phone +91 8073222459 to alert recipients.');
+    console.log('[Seed] Added user phone +91 6360911344 to alert recipients.');
   }
 
   // Seed sample detections for CROPSENTRY_01 if empty
@@ -77,10 +77,10 @@ export function seedData() {
       if (ev.alert === 1) {
         insertAlertLog.run(
           res.lastInsertRowid,
-          '+91 8073222459',
+          '+91 6360911344',
           time,
           'sent',
-          '{"status":"delivered","phone":"+918073222459"}'
+          '{"status":"delivered","phone":"+916360911344"}'
         );
       }
     }
