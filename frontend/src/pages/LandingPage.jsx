@@ -146,9 +146,14 @@ export default function LandingPage({ onEnterConsole }) {
       </header>
 
       {/* 2. HERO SECTION */}
-      <section className="relative bg-gradient-to-b from-[#142A1D] via-[#1A3826] to-[#244C34] text-white pt-12 pb-24 px-4 sm:px-6 overflow-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-700/10 rounded-full blur-3xl pointer-events-none"></div>
+      <section className="relative bg-gradient-to-b from-[#142A1D] via-[#1A3826] via-70% to-[#1E3F2B] text-white pt-12 pb-36 px-4 sm:px-6 overflow-hidden">
+        {/* Soft atmospheric depth & gentle radial glows behind main content */}
+        <div className="absolute top-0 right-0 w-[550px] h-[550px] bg-emerald-500/10 rounded-full blur-[130px] pointer-events-none"></div>
+        <div className="absolute bottom-16 left-0 w-[450px] h-[450px] bg-emerald-700/15 rounded-full blur-[120px] pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-emerald-400/[0.06] rounded-full blur-[140px] pointer-events-none"></div>
+
+        {/* Smooth dark-green-to-transparent dissolve fading toward the bottom */}
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent via-[#1A3826]/60 via-45% to-[#F3F6F1] pointer-events-none z-10"></div>
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
           {/* Hero Left Copy */}
@@ -235,7 +240,7 @@ export default function LandingPage({ onEnterConsole }) {
       </section>
 
       {/* 3. THREE-COLUMN FEATURE STRIP */}
-      <section className="relative -mt-12 z-20 px-4 sm:px-6 max-w-7xl mx-auto">
+      <section className="relative -mt-20 z-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-md space-y-3 flex flex-col justify-between">
             <div>
