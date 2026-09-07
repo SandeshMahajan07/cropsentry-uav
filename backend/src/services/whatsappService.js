@@ -135,12 +135,14 @@ export async function sendAlert(recipient, detection, options = {}) {
     providerResponse = JSON.stringify({ error: err.message, direct_link: waDirectLink });
   }
 
-  // Record send attempt into alerts_log
+  // Record send attempt into alerts_log if a valid detection record exists
   try {
-    db.prepare(`
-      INSERT INTO alerts_log (detection_id, recipient_phone, sent_at, status, provider_response)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(detection.id, recipient, now, sendStatus, providerResponse);
+    if (detection && detection.id) {
+      db.prepare(`
+        INSERT INTO alerts_log (detection_id, recipient_phone, sent_at, status, provider_response)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(detection.id, recipient, now, sendStatus, providerResponse);
+    }
   } catch (dbErr) {
     console.error('[WhatsApp Service] Failed to log alert:', dbErr.message);
   }

@@ -10,10 +10,45 @@ const router = express.Router();
  */
 router.get('/', (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM alert_recipients ORDER BY id ASC').all();
+    const rows = db.prepare('SELECT * FROM alert_recipients WHERE active = 1 ORDER BY id ASC').all();
     return res.json({ data: rows });
   } catch (err) {
     console.error('[API] GET /recipients error:', err);
+    return res.status(500).json({ error: 'Internal server error', message: err.message });
+  }
+});
+
+/**
+ * PUT /api/v1/recipients/primary
+ * Update or set the single primary emergency alert recipient
+ */
+router.put('/primary', (req, res) => {
+  try {
+    const { name = 'Primary Field Owner', phone_number = '+91 6360911344' } = req.body;
+    let cleanPhone = phone_number.replace(/[^0-9]/g, '');
+
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return res.status(400).json({ error: 'Please provide a valid 10-digit phone number' });
+    }
+
+    const formatted = phone_number.startsWith('+') ? phone_number.trim() : `+91 ${cleanPhone.slice(-10)}`;
+
+    const existing = db.prepare('SELECT id FROM alert_recipients LIMIT 1').get();
+    if (existing) {
+      db.prepare('UPDATE alert_recipients SET name = ?, phone_number = ?, active = 1 WHERE id = ?')
+        .run(name.trim(), formatted, existing.id);
+    } else {
+      db.prepare('INSERT INTO alert_recipients (name, phone_number, active) VALUES (?, ?, 1)')
+        .run(name.trim(), formatted);
+    }
+
+    // Deactivate any others to keep strictly single recipient
+    db.prepare('UPDATE alert_recipients SET active = 0 WHERE phone_number != ?').run(formatted);
+
+    const updated = db.prepare('SELECT * FROM alert_recipients WHERE active = 1 LIMIT 1').get();
+    return res.json({ message: 'Primary alert recipient updated', data: updated });
+  } catch (err) {
+    console.error('[API] PUT /recipients/primary error:', err);
     return res.status(500).json({ error: 'Internal server error', message: err.message });
   }
 });

@@ -42,11 +42,12 @@ export default function Settings() {
     twilio_from_phone: 'whatsapp:+14155238886'
   });
 
-  // Recipients
-  const [recipients, setRecipients] = useState([]);
-  const [newRecipientName, setNewRecipientName] = useState('');
-  const [newRecipientPhone, setNewRecipientPhone] = useState('');
-  const [addingRecipient, setAddingRecipient] = useState(false);
+  // Single Primary Recipient
+  const [primaryContact, setPrimaryContact] = useState({
+    name: 'Primary Field Owner',
+    phone_number: '+91 6360911344'
+  });
+  const [savingContact, setSavingContact] = useState(false);
 
   // Load initial data
   const loadInitialData = async () => {
@@ -57,7 +58,12 @@ export default function Settings() {
         api.getConfig()
       ]);
 
-      setRecipients(recipientsRes.data || []);
+      if (recipientsRes.data && recipientsRes.data.length > 0) {
+        setPrimaryContact({
+          name: recipientsRes.data[0].name || 'Primary Field Owner',
+          phone_number: recipientsRes.data[0].phone_number || '+91 6360911344'
+        });
+      }
       if (configRes.data) {
         setConfig({
           alert_threshold_celsius: configRes.data.alert_threshold_celsius,
@@ -128,39 +134,19 @@ export default function Settings() {
     }
   };
 
-  // Add Alert Recipient
-  const handleAddRecipient = async (e) => {
+  // Update Primary Emergency Contact
+  const handleSaveContact = async (e) => {
     e.preventDefault();
-    if (!newRecipientName || !newRecipientPhone) return;
-
     try {
-      setAddingRecipient(true);
-      const res = await api.addRecipient({
-        name: newRecipientName.trim(),
-        phone_number: newRecipientPhone.trim(),
-        active: 1
-      });
-
-      setRecipients([...recipients, res.data]);
-      setNewRecipientName('');
-      setNewRecipientPhone('');
+      setSavingContact(true);
+      await api.updatePrimaryRecipient(primaryContact);
+      setSuccessMsg(`Primary emergency alert number updated to ${primaryContact.phone_number}!`);
+      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
-      console.error('Failed to add recipient:', err);
-      alert(err.response?.data?.error || 'Failed to add recipient');
+      console.error('Failed to update primary contact:', err);
+      setErrorMsg('Failed to update primary emergency contact');
     } finally {
-      setAddingRecipient(false);
-    }
-  };
-
-  // Delete Alert Recipient
-  const handleDeleteRecipient = async (id) => {
-    if (!confirm('Remove this alert recipient?')) return;
-    try {
-      await api.deleteRecipient(id);
-      setRecipients(recipients.filter(r => r.id !== id));
-    } catch (err) {
-      console.error('Failed to delete recipient:', err);
-      alert('Failed to delete recipient');
+      setSavingContact(false);
     }
   };
 
@@ -476,22 +462,22 @@ export default function Settings() {
         </form>
       </div>
 
-      {/* Section 2: WhatsApp Emergency Contacts */}
+      {/* Section 2: Primary Emergency WhatsApp Contact (Single Phone Scope) */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Users className="w-4 h-4 text-forest-700" />
-              <span>WhatsApp Emergency Notification Contacts</span>
+              <span>Primary Emergency Contact (Single Operator Scope)</span>
             </h4>
             <p className="text-xs text-slate-500 mt-0.5">
-              Target recipient: <strong className="text-slate-800">+91 6360911344</strong>. Dispatches automated wildlife intrusion alerts with live Google Maps links.
+              All nocturnal intrusion alerts and live Google Maps telemetry links are routed exclusively to this number.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <a
-              href="https://api.whatsapp.com/send?phone=916360911344&text=%F0%9F%9A%A8%20*WILD%20ANIMAL%20DETECTED!*%20%E2%80%94%20CropSentry%20UAV%0A%0A%F0%9F%93%85%20*Time%3A*%20Live%20Patrol%20(IST)%0A%F0%9F%93%8D%20*Location%3A*%2017.329700%2C%2076.837100%0A%F0%9F%97%BA%EF%B8%8F%20*View%20on%20Google%20Maps%3A*%20https%3A%2F%2Fwww.google.com%2Fmaps%3Fq%3D17.329700%2C76.837100%0A%F0%9F%8C%A1%EF%B8%8F%20*Thermal%20Reading%3A*%2037.2%C2%B0C%20(Ambient%3A%2022.0%C2%B0C)%0A%E2%9A%A1%20*Contrast%20%CE%94T%3A*%20%2B15.2%C2%B0C%0A%0A%F0%9F%94%94%20*Status%3A*%20Deterrent%20strobe%20%26%20110dB%20acoustic%20siren%20triggered%20on%20drone."
+              href={`https://api.whatsapp.com/send?phone=${primaryContact.phone_number.replace(/[^0-9]/g, '')}&text=%F0%9F%9A%A8%20*WILD%20ANIMAL%20DETECTED!*%20%E2%80%94%20CropSentry%20UAV%0A%0A%F0%9F%93%85%20*Time%3A*%20Live%20Patrol%20(IST)%0A%F0%9F%93%8D%20*Location%3A*%2017.329700%2C%2076.837100%0A%F0%9F%97%BA%EF%B8%8F%20*View%20on%20Google%20Maps%3A*%20https%3A%2F%2Fwww.google.com%2Fmaps%3Fq%3D17.329700%2C76.837100%0A%F0%9F%8C%A1%EF%B8%8F%20*Thermal%20Reading%3A*%2037.2%C2%B0C%20(Ambient%3A%2022.0%C2%B0C)%0A%E2%9A%A1%20*Contrast%20%CE%94T%3A*%20%2B15.2%C2%B0C%0A%0A%F0%9F%94%94%20*Status%3A*%20Deterrent%20strobe%20%26%20110dB%20acoustic%20siren%20triggered%20on%20drone.`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
@@ -503,7 +489,7 @@ export default function Settings() {
 
             <button
               type="button"
-              onClick={() => handleTestWhatsAppAlert('+91 6360911344')}
+              onClick={() => handleTestWhatsAppAlert(primaryContact.phone_number)}
               disabled={sendingTestAlert}
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
             >
@@ -521,10 +507,10 @@ export default function Settings() {
                 Status: {testAlertResult.status}
               </span>
             </div>
-            {testAlertResult.details?.provider === 'callmebot' && (
+            {testAlertResult.details?.provider === 'twilio' && (
               <div className="p-2.5 bg-white rounded-xl border border-emerald-200 text-[11px]">
-                <p className="font-semibold text-emerald-900">CallMeBot Response:</p>
-                <p className="font-mono text-[10px] text-slate-700">{testAlertResult.details.raw_response || testAlertResult.details.status}</p>
+                <p className="font-semibold text-emerald-900">Twilio Official Gateway Status:</p>
+                <p className="font-mono text-[10px] text-slate-700">SID: {testAlertResult.details.sid} ({testAlertResult.details.status})</p>
               </div>
             )}
             <p className="text-slate-600">
@@ -546,92 +532,61 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Add Recipient Form */}
-        <form onSubmit={handleAddRecipient} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          <div className="sm:col-span-5">
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Contact Name / Role</label>
-            <input
-              type="text"
-              placeholder="e.g. Primary Field Owner"
-              value={newRecipientName}
-              onChange={(e) => setNewRecipientName(e.target.value)}
-              className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-forest-600 focus:outline-none"
-              required
-            />
+        {/* Primary Contact Details & Edit Form */}
+        <form onSubmit={handleSaveContact} className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-forest-700" />
+              <span className="text-xs font-bold text-slate-900">Configured Primary Alert Recipient</span>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              ● Sole Active Destination
+            </span>
           </div>
 
-          <div className="sm:col-span-5">
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Phone Number (with Country Code)</label>
-            <input
-              type="text"
-              placeholder="+91 6360911344"
-              value={newRecipientPhone}
-              onChange={(e) => setNewRecipientPhone(e.target.value)}
-              className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-forest-600 focus:outline-none"
-              required
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            <div className="sm:col-span-5">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Contact Name / Role
+              </label>
+              <input
+                type="text"
+                value={primaryContact.name}
+                onChange={(e) => setPrimaryContact({ ...primaryContact, name: e.target.value })}
+                className="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-forest-600 focus:outline-none"
+                required
+              />
+            </div>
+
+            <div className="sm:col-span-5">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Emergency Mobile Number (with Country Code)
+              </label>
+              <input
+                type="text"
+                value={primaryContact.phone_number}
+                onChange={(e) => setPrimaryContact({ ...primaryContact, phone_number: e.target.value })}
+                className="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-forest-600 focus:outline-none"
+                required
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                disabled={savingContact}
+                className="w-full py-2.5 rounded-xl bg-forest-800 hover:bg-forest-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{savingContact ? 'Saving...' : 'Update'}</span>
+              </button>
+            </div>
           </div>
 
-          <div className="sm:col-span-2 flex items-end">
-            <button
-              type="submit"
-              disabled={addingRecipient}
-              className="w-full py-2.5 rounded-xl bg-forest-800 hover:bg-forest-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add</span>
-            </button>
+          <div className="p-3 bg-white rounded-xl border border-slate-200/80 text-[11px] text-slate-500">
+            🔒 <strong>Single Operator Scope:</strong> CropSentry is currently locked to this single verified mobile number to prevent unauthenticated alert broadcasting. Whenever scaling to farm clusters or multiple field guards, multi-recipient fleet routing can be expanded.
           </div>
         </form>
-
-        {/* Recipients Table */}
-        <div className="overflow-x-auto border border-slate-100 rounded-2xl">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px]">
-              <tr>
-                <th className="py-3 px-4">Contact Name</th>
-                <th className="py-3 px-4">Phone Number</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Quick Test & Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {recipients.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/60">
-                  <td className="py-3 px-4 font-semibold text-slate-900">{r.name}</td>
-                  <td className="py-3 px-4 font-mono text-slate-700 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{r.phone_number}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      Active
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleTestWhatsAppAlert(r.phone_number)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[11px] font-semibold flex items-center gap-1"
-                        title="Send Test Alert"
-                      >
-                        <Send className="w-3 h-3" />
-                        <span>Test Alert</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteRecipient(r.id)}
-                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
-                        title="Delete Recipient"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );

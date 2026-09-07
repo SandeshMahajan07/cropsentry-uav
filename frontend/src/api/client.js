@@ -76,6 +76,11 @@ export const api = {
     return res.data;
   },
 
+  updatePrimaryRecipient: async (recipientData) => {
+    const res = await axios.put(`${API_BASE}/recipients/primary`, recipientData);
+    return res.data;
+  },
+
   deleteRecipient: async (id) => {
     const res = await axios.delete(`${API_BASE}/recipients/${id}`);
     return res.data;
