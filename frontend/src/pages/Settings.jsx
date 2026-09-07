@@ -13,7 +13,10 @@ import {
   Radio, 
   Send,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Key,
+  HelpCircle,
+  MessageSquare
 } from 'lucide-react';
 
 export default function Settings() {
@@ -28,7 +31,8 @@ export default function Settings() {
   const [config, setConfig] = useState({
     alert_threshold_celsius: 8.0,
     dedup_radius_meters: 50.0,
-    dedup_time_window_minutes: 10
+    dedup_time_window_minutes: 10,
+    callmebot_api_key: ''
   });
 
   // Recipients
@@ -51,7 +55,8 @@ export default function Settings() {
         setConfig({
           alert_threshold_celsius: configRes.data.alert_threshold_celsius,
           dedup_radius_meters: configRes.data.dedup_radius_meters,
-          dedup_time_window_minutes: configRes.data.dedup_time_window_minutes
+          dedup_time_window_minutes: configRes.data.dedup_time_window_minutes,
+          callmebot_api_key: configRes.data.callmebot_api_key || ''
         });
       }
     } catch (err) {
@@ -65,7 +70,7 @@ export default function Settings() {
     loadInitialData();
   }, []);
 
-  // Save Threshold Configuration
+  // Save Threshold & Gateway Configuration
   const handleSaveConfig = async (e) => {
     e.preventDefault();
     setSavingConfig(true);
@@ -77,11 +82,12 @@ export default function Settings() {
         drone_id: null, // Global / Single Drone
         alert_threshold_celsius: parseFloat(config.alert_threshold_celsius),
         dedup_radius_meters: parseFloat(config.dedup_radius_meters),
-        dedup_time_window_minutes: parseInt(config.dedup_time_window_minutes, 10)
+        dedup_time_window_minutes: parseInt(config.dedup_time_window_minutes, 10),
+        callmebot_api_key: config.callmebot_api_key?.trim() || null
       };
 
       await api.updateConfig(payload);
-      setSuccessMsg('Thermal thresholds updated! The backend decision engine is now using your new settings.');
+      setSuccessMsg('Settings saved! Thermal thresholds and WhatsApp gateway config updated in database.');
       setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err) {
       console.error('Failed to save config:', err);
@@ -96,7 +102,10 @@ export default function Settings() {
     try {
       setSendingTestAlert(true);
       setTestAlertResult(null);
-      const res = await api.testWhatsAppAlert(phoneNumber || '+91 8073222459');
+      const res = await api.testWhatsAppAlert(
+        phoneNumber || '+91 6360911344', 
+        config.callmebot_api_key?.trim() || null
+      );
       setTestAlertResult(res);
     } catch (err) {
       console.error('Failed to trigger test alert:', err);
@@ -264,6 +273,73 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* CallMeBot WhatsApp Gateway Configuration */}
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800">
+                  <Key className="w-4 h-4 text-emerald-700" />
+                </div>
+                <div>
+                  <h5 className="text-xs font-bold text-slate-900">
+                    CallMeBot WhatsApp Push Gateway (100% Free)
+                  </h5>
+                  <p className="text-[11px] text-slate-500">
+                    Enables the backend to push real-time WhatsApp alerts directly to your phone when an animal is detected.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  config.callmebot_api_key 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                    : 'bg-amber-100 text-amber-800 border border-amber-300'
+                }`}>
+                  {config.callmebot_api_key ? '● Live Push Active' : '○ 1-Click Link Mode'}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+              <div className="sm:col-span-8">
+                <label htmlFor="callmebot-input" className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  CallMeBot API Key
+                </label>
+                <input
+                  id="callmebot-input"
+                  type="text"
+                  placeholder="e.g. 123456 (Leave blank for 1-Click WhatsApp links)"
+                  value={config.callmebot_api_key}
+                  onChange={(e) => setConfig({ ...config, callmebot_api_key: e.target.value })}
+                  className="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-forest-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-4 flex items-end">
+                <a
+                  href="https://wa.me/34644597167?text=I%20allow%20callmebot%20to%20send%20me%20messages"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-[11px] transition flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <span>1-Tap Get Free Key</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-slate-200/80 text-[11px] text-slate-600 space-y-1">
+              <p className="font-semibold text-slate-800">How to get your free CallMeBot key (takes 20 seconds):</p>
+              <p>
+                1. Click the button above to send <code className="bg-slate-100 px-1 rounded text-emerald-800 font-bold">I allow callmebot to send me messages</code> to <code className="font-bold">+34 644 59 71 67</code> from your phone.
+              </p>
+              <p>
+                2. CallMeBot will reply immediately on WhatsApp with your personal 6-digit API key. Paste it above and click "Save Configuration Changes".
+              </p>
+            </div>
+          </div>
+
           <div className="flex justify-end pt-2">
             <button
               type="submit"
@@ -292,25 +368,31 @@ export default function Settings() {
 
           <button
             type="button"
-            onClick={() => handleTestWhatsAppAlert('+91 8073222459')}
+            onClick={() => handleTestWhatsAppAlert('+91 6360911344')}
             disabled={sendingTestAlert}
             className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>{sendingTestAlert ? 'Sending Alert...' : 'Send Test Alert to +91 8073222459'}</span>
+            <span>{sendingTestAlert ? 'Sending Alert...' : 'Send Test Alert to +91 6360911344'}</span>
           </button>
         </div>
 
         {testAlertResult && (
           <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-2">
             <div className="flex items-center justify-between font-bold">
-              <span>✅ Alert Dispatched to {testAlertResult.phone}</span>
+              <span>✅ {testAlertResult.message || `Alert Dispatched to ${testAlertResult.phone}`}</span>
               <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-full uppercase text-[10px]">
                 Status: {testAlertResult.status}
               </span>
             </div>
+            {testAlertResult.details?.provider === 'callmebot' && (
+              <div className="p-2.5 bg-white rounded-xl border border-emerald-200 text-[11px]">
+                <p className="font-semibold text-emerald-900">CallMeBot Response:</p>
+                <p className="font-mono text-[10px] text-slate-700">{testAlertResult.details.raw_response || testAlertResult.details.status}</p>
+              </div>
+            )}
             <p className="text-slate-600">
-              The automated alert has been processed and queued by the backend notification dispatcher.
+              The automated alert has been processed and logged in SQLite database `alerts_log`.
             </p>
             {testAlertResult.direct_whatsapp_url && (
               <div className="pt-2">
@@ -318,7 +400,7 @@ export default function Settings() {
                   href={testAlertResult.direct_whatsapp_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
                 >
                   <span>Open Alert in WhatsApp Web / App</span>
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -334,7 +416,7 @@ export default function Settings() {
             <label className="block text-[11px] font-semibold text-slate-600 mb-1">Contact Name / Role</label>
             <input
               type="text"
-              placeholder="e.g. Field Owner (Farm Lead)"
+              placeholder="e.g. Primary Field Owner"
               value={newRecipientName}
               onChange={(e) => setNewRecipientName(e.target.value)}
               className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-forest-600 focus:outline-none"
@@ -346,7 +428,7 @@ export default function Settings() {
             <label className="block text-[11px] font-semibold text-slate-600 mb-1">Phone Number (with Country Code)</label>
             <input
               type="text"
-              placeholder="+91 8073222459"
+              placeholder="+91 6360911344"
               value={newRecipientPhone}
               onChange={(e) => setNewRecipientPhone(e.target.value)}
               className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-forest-600 focus:outline-none"

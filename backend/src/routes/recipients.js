@@ -57,11 +57,30 @@ router.post('/', (req, res) => {
  */
 router.post('/test-alert', async (req, res) => {
   try {
-    const { phone_number = '+91 6360911344' } = req.body;
-    const cleanPhone = phone_number.replace(/[^0-9]/g, '');
+    const { phone_number = '+91 6360911344', callmebot_api_key } = req.body;
+    let cleanPhone = phone_number.replace(/[^0-9]/g, '');
 
     if (!cleanPhone || cleanPhone.length < 10) {
       return res.status(400).json({ error: 'Please provide a valid phone number (at least 10 digits)' });
+    }
+
+    if (cleanPhone.length === 10) {
+      cleanPhone = `91${cleanPhone}`;
+    }
+
+    // Save CallMeBot API Key to database config if provided
+    if (callmebot_api_key && typeof callmebot_api_key === 'string' && callmebot_api_key.trim()) {
+      const trimmedKey = callmebot_api_key.trim();
+      const existingConfig = db.prepare('SELECT id FROM config WHERE drone_id IS NULL').get();
+      const now = new Date().toISOString();
+      if (existingConfig) {
+        db.prepare('UPDATE config SET callmebot_api_key = ?, updated_at = ? WHERE drone_id IS NULL').run(trimmedKey, now);
+      } else {
+        db.prepare(`
+          INSERT INTO config (drone_id, alert_threshold_celsius, dedup_radius_meters, dedup_time_window_minutes, callmebot_api_key, updated_at)
+          VALUES (NULL, 8.0, 50.0, 10, ?, ?)
+        `).run(trimmedKey, now);
+      }
     }
 
     // Auto-register recipient in database if not present
@@ -70,7 +89,7 @@ router.post('/test-alert', async (req, res) => {
       db.prepare(`
         INSERT INTO alert_recipients (name, phone_number, active)
         VALUES (?, ?, 1)
-      `).run(`Farmer (${cleanPhone})`, phone_number);
+      `).run(`Primary Field Owner (+${cleanPhone})`, `+${cleanPhone}`);
     }
 
     // Get latest detection or fallback
@@ -88,27 +107,28 @@ router.post('/test-alert', async (req, res) => {
       };
     }
 
-    const dispatchResult = await sendAlert(phone_number, latest);
+    const dispatchResult = await sendAlert(
+      phone_number, 
+      latest, 
+      callmebot_api_key ? { apiKey: callmebot_api_key.trim() } : {}
+    );
 
-    const messageText = 
-      `🚨 *WILD ANIMAL DETECTED!* — CropSentry UAV\n\n` +
-      `📅 *Time:* ${new Date(latest.timestamp).toLocaleTimeString('en-IN')} (IST)\n` +
-      `📍 *Location:* ${latest.latitude.toFixed(6)}, ${latest.longitude.toFixed(6)}\n` +
-      `🗺️ *View on Google Maps:* https://www.google.com/maps?q=${latest.latitude.toFixed(6)},${latest.longitude.toFixed(6)}\n` +
-      `🌡️ *Thermal Reading:* ${latest.object_temp_celsius}°C (Ambient: ${latest.ambient_temp_celsius}°C)\n` +
-      `⚡ *Contrast ΔT:* +${latest.delta}°C\n` +
-      `🔔 *Deterrent Status:* Strobe & 110dB Acoustic Siren Fired on Drone.`;
-
-    const directWaLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
+    let parsedDetails = {};
+    try {
+      parsedDetails = JSON.parse(dispatchResult.providerResponse || '{}');
+    } catch (e) {
+      parsedDetails = { raw: dispatchResult.providerResponse };
+    }
 
     return res.json({
-      message: `Alert dispatched to +${cleanPhone}`,
+      message: dispatchResult.status === 'sent' 
+        ? `Alert successfully dispatched to +${cleanPhone}` 
+        : `Alert dispatch failed to gateway for +${cleanPhone}`,
       phone: phone_number,
       clean_phone: cleanPhone,
       status: dispatchResult.status,
-      direct_whatsapp_url: directWaLink,
-      message_body: messageText,
-      details: dispatchResult.providerResponse
+      direct_whatsapp_url: dispatchResult.directLink,
+      details: parsedDetails
     });
   } catch (err) {
     console.error('[API] POST /recipients/test-alert error:', err);

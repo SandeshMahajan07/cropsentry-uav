@@ -81,8 +81,11 @@ export const api = {
     return res.data;
   },
 
-  testWhatsAppAlert: async (phoneNumber) => {
-    const res = await axios.post(`${API_BASE}/recipients/test-alert`, { phone_number: phoneNumber });
+  testWhatsAppAlert: async (phoneNumber, callmebotApiKey = null) => {
+    const res = await axios.post(`${API_BASE}/recipients/test-alert`, { 
+      phone_number: phoneNumber,
+      callmebot_api_key: callmebotApiKey
+    });
     return res.data;
   },
 

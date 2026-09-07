@@ -25,23 +25,52 @@ export function formatAlertMessage(detection) {
  * Abstracted WhatsApp sender
  * Dispatches message to provider (Simulated / Twilio / CallMeBot) and records into alerts_log
  */
-export async function sendAlert(recipient, detection) {
+export async function sendAlert(recipient, detection, options = {}) {
   const messageBody = formatAlertMessage(detection);
   const now = new Date().toISOString();
   let sendStatus = 'sent';
   let providerResponse = '';
 
-  const cleanPhone = recipient.replace(/[^0-9]/g, '');
+  let cleanPhone = recipient.replace(/[^0-9]/g, '');
+  // If 10-digit Indian phone number without country code, automatically prepend 91
+  if (cleanPhone.length === 10) {
+    cleanPhone = `91${cleanPhone}`;
+  }
+
+  const waDirectLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageBody)}`;
+
+  // Priority for CallMeBot key: options.apiKey -> DB config -> process.env.CALLMEBOT_API_KEY
+  let callmebotKey = options.apiKey || process.env.CALLMEBOT_API_KEY;
+  if (!callmebotKey) {
+    try {
+      const configRow = db.prepare('SELECT callmebot_api_key FROM config WHERE callmebot_api_key IS NOT NULL AND callmebot_api_key != "" LIMIT 1').get();
+      if (configRow?.callmebot_api_key) {
+        callmebotKey = configRow.callmebot_api_key;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
 
   try {
-    if (process.env.CALLMEBOT_API_KEY) {
+    if (callmebotKey) {
       // CallMeBot WhatsApp API
       const encodedMsg = encodeURIComponent(messageBody);
-      const url = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${encodedMsg}&apikey=${process.env.CALLMEBOT_API_KEY}`;
+      const url = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${encodedMsg}&apikey=${callmebotKey}`;
+      console.log(`[WhatsApp Service] Dispatching via CallMeBot to +${cleanPhone}...`);
       const resp = await fetch(url);
       const text = await resp.text();
-      providerResponse = JSON.stringify({ provider: 'callmebot', response: text.substring(0, 200) });
-      if (!resp.ok) sendStatus = 'failed';
+      console.log(`[WhatsApp Service] CallMeBot response (${resp.status}): ${text.substring(0, 200)}`);
+
+      const isSuccess = resp.ok && !text.toLowerCase().includes('error') && !text.toLowerCase().includes('invalid');
+      sendStatus = isSuccess ? 'sent' : 'failed';
+      providerResponse = JSON.stringify({
+        provider: 'callmebot',
+        status: isSuccess ? 'delivered_to_gateway' : 'gateway_rejected',
+        phone: cleanPhone,
+        direct_link: waDirectLink,
+        raw_response: text.substring(0, 300)
+      });
     } else if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
       // Twilio WhatsApp
       const url = `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`;
@@ -62,11 +91,10 @@ export async function sendAlert(recipient, detection) {
       });
 
       const json = await resp.json();
-      providerResponse = JSON.stringify({ provider: 'twilio', sid: json.sid, status: json.status });
+      providerResponse = JSON.stringify({ provider: 'twilio', sid: json.sid, status: json.status, direct_link: waDirectLink });
       if (!resp.ok) sendStatus = 'failed';
     } else {
       // High-Fidelity Alert Dispatcher & Direct WhatsApp Link Generator
-      const waDirectLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageBody)}`;
       console.log(`\n================= [WHATSAPP DISPATCH] =================`);
       console.log(`To: +${cleanPhone}`);
       console.log(messageBody);
@@ -82,7 +110,7 @@ export async function sendAlert(recipient, detection) {
   } catch (err) {
     console.error('[WhatsApp Service] Send error:', err.message);
     sendStatus = 'failed';
-    providerResponse = JSON.stringify({ error: err.message });
+    providerResponse = JSON.stringify({ error: err.message, direct_link: waDirectLink });
   }
 
   // Record send attempt into alerts_log
@@ -95,5 +123,5 @@ export async function sendAlert(recipient, detection) {
     console.error('[WhatsApp Service] Failed to log alert:', dbErr.message);
   }
 
-  return { status: sendStatus, providerResponse };
+  return { status: sendStatus, providerResponse, directLink: waDirectLink };
 }

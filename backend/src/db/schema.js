@@ -64,10 +64,19 @@ export function initializeDatabase() {
       alert_threshold_celsius REAL NOT NULL DEFAULT 8.0,
       dedup_radius_meters REAL NOT NULL DEFAULT 50.0,
       dedup_time_window_minutes INTEGER NOT NULL DEFAULT 10,
+      callmebot_api_key TEXT,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (drone_id) REFERENCES drones (drone_id) ON DELETE CASCADE
     );
   `);
 
+  // Safe migration for existing config table
+  try {
+    db.exec(`ALTER TABLE config ADD COLUMN callmebot_api_key TEXT;`);
+  } catch (err) {
+    // Column already exists or table freshly created
+  }
+
   console.log('[DB] Database tables initialized successfully.');
 }
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { 
   X, 
@@ -8,15 +8,30 @@ import {
   CheckCircle2, 
   AlertCircle,
   MessageSquare,
-  Sparkles,
-  Info
+  Key,
+  ShieldCheck,
+  Info,
+  HelpCircle
 } from 'lucide-react';
 
 export default function WhatsAppModal({ isOpen, onClose }) {
   const [phoneNumber, setPhoneNumber] = useState('+91 6360911344');
+  const [apiKey, setApiKey] = useState('');
+  const [showKeyHelp, setShowKeyHelp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Load saved CallMeBot API key from config if available
+      api.getConfig().then((res) => {
+        if (res.data?.callmebot_api_key) {
+          setApiKey(res.data.callmebot_api_key);
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -27,15 +42,15 @@ export default function WhatsAppModal({ isOpen, onClose }) {
     setError(null);
 
     try {
-      const res = await api.testWhatsAppAlert(phoneNumber.trim());
+      const res = await api.testWhatsAppAlert(phoneNumber.trim(), apiKey.trim() || null);
       setResult(res);
-      // Auto-open WhatsApp in a new tab if URL is present
-      if (res.direct_whatsapp_url) {
+      // Auto-open WhatsApp in a new tab if no push gateway key was provided
+      if (!apiKey.trim() && res.direct_whatsapp_url) {
         window.open(res.direct_whatsapp_url, '_blank');
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.error || err.message || 'Failed to dispatch alert simulation');
+      setError(err.response?.data?.error || err.message || 'Failed to dispatch alert');
     } finally {
       setLoading(false);
     }
@@ -51,13 +66,13 @@ export default function WhatsAppModal({ isOpen, onClose }) {
               <MessageSquare className="w-5 h-5 text-emerald-700" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">WhatsApp Emergency Alert Simulator</h3>
-              <p className="text-xs text-slate-500">Test live wildlife intrusion dispatch to any mobile number</p>
+              <h3 className="text-base font-bold text-slate-900">WhatsApp Emergency Alert Dispatcher</h3>
+              <p className="text-xs text-slate-500">Test live wildlife intrusion dispatch to your mobile number</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close WhatsApp Simulator"
+            aria-label="Close WhatsApp Dispatcher"
             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition"
           >
             <X className="w-5 h-5" />
@@ -68,7 +83,7 @@ export default function WhatsAppModal({ isOpen, onClose }) {
         <form onSubmit={handleSend} className="space-y-4 text-xs">
           <div>
             <label htmlFor="sim-phone" className="block font-semibold text-slate-700 mb-1">
-              Enter Target Mobile Number (with Country Code)
+              Target WhatsApp Mobile Number
             </label>
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-3 focus-within:ring-2 focus-within:ring-emerald-600">
               <Phone className="w-4 h-4 text-slate-400" />
@@ -82,9 +97,60 @@ export default function WhatsAppModal({ isOpen, onClose }) {
                 required
               />
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Example: <code>+91 6360911344</code> or <code>6360911344</code>.
-            </p>
+          </div>
+
+          {/* CallMeBot API Key (Optional for Direct Automated Push) */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="callmebot-key" className="font-semibold text-slate-800 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-emerald-600" />
+                <span>CallMeBot Free API Key (For Direct Phone Buzz)</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowKeyHelp(!showKeyHelp)}
+                className="text-[11px] text-emerald-700 hover:underline flex items-center gap-1 font-medium"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>{showKeyHelp ? 'Hide instructions' : 'How to get free key?'}</span>
+              </button>
+            </div>
+
+            <input
+              id="callmebot-key"
+              type="text"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="e.g. 123456 (Leave empty for 1-Click WhatsApp link)"
+              className="w-full bg-white text-xs font-mono font-bold text-slate-900 border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+            />
+
+            {showKeyHelp && (
+              <div className="p-3 bg-white rounded-xl border border-emerald-200 text-[11px] text-slate-700 space-y-1.5 animate-fade-in">
+                <p className="font-bold text-emerald-900">Why is this needed?</p>
+                <p>
+                  Meta/WhatsApp prevents spam by forbidding unknown servers from cold-messaging users. CallMeBot is a 100% free IoT gateway that sends alerts once you authorize it.
+                </p>
+                <p className="font-bold text-slate-900 pt-1">30-Second Free Setup:</p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-600">
+                  <li>
+                    Open WhatsApp and send message: <code className="bg-slate-100 px-1 rounded text-emerald-800 font-bold">I allow callmebot to send me messages</code> to <code className="font-bold">+34 644 59 71 67</code>
+                  </li>
+                  <li>
+                    <a
+                      href="https://wa.me/34644597167?text=I%20allow%20callmebot%20to%20send%20me%20messages"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-emerald-700 font-bold underline"
+                    >
+                      <span>Click here to open WhatsApp & authorize CallMeBot</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </li>
+                  <li>CallMeBot will reply instantly with your 6-digit API key. Paste it above!</li>
+                </ol>
+              </div>
+            )}
           </div>
 
           {/* Message Preview Box */}
@@ -105,33 +171,35 @@ export default function WhatsAppModal({ isOpen, onClose }) {
             </div>
           </div>
 
-          {/* Info note */}
-          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
-            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p>
-              WhatsApp anti-spam policy restricts unverified trial numbers from receiving unsolicited messages. Clicking below dispatches the backend event and opens the direct gateway link so you immediately receive and view it!
-            </p>
-          </div>
-
           {result && (
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-2">
               <div className="flex items-center gap-2 font-bold text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                Alert Dispatched & Logged to #{result.phone}
+                <span>{result.message}</span>
               </div>
-              <p className="text-[11px] text-emerald-800">
-                The alert was recorded in SQLite database `alerts_log` and dispatched to the gateway.
-              </p>
+              
+              {result.details?.provider === 'callmebot' ? (
+                <div className="text-[11px] text-emerald-800 bg-white/70 p-2.5 rounded-xl border border-emerald-200">
+                  <p className="font-semibold">CallMeBot Gateway Response:</p>
+                  <p className="font-mono text-[10px] text-slate-700 mt-0.5">{result.details.raw_response || result.details.status}</p>
+                </div>
+              ) : null}
+
               {result.direct_whatsapp_url && (
-                <a
-                  href={result.direct_whatsapp_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs transition shadow-sm"
-                >
-                  <span>Open Alert in WhatsApp Now</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <div className="pt-1 flex flex-col gap-1.5">
+                  <p className="text-[11px] text-slate-600">
+                    You can also open this alert immediately in WhatsApp:
+                  </p>
+                  <a
+                    href={result.direct_whatsapp_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs transition shadow-sm"
+                  >
+                    <span>Open Alert in WhatsApp Now</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
               )}
             </div>
           )}
@@ -157,7 +225,7 @@ export default function WhatsAppModal({ isOpen, onClose }) {
               className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs transition shadow-sm flex items-center gap-2 disabled:opacity-50"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>{loading ? 'Dispatched...' : 'Send Simulated Alert to WhatsApp'}</span>
+              <span>{loading ? 'Dispatching...' : (apiKey ? 'Send Push Alert to WhatsApp' : 'Dispatch & Open in WhatsApp')}</span>
             </button>
           </div>
         </form>
