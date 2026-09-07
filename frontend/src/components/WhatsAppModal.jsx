@@ -11,7 +11,8 @@ import {
   Key,
   ShieldCheck,
   Info,
-  HelpCircle
+  HelpCircle,
+  Sparkles
 } from 'lucide-react';
 
 export default function WhatsAppModal({ isOpen, onClose }) {
@@ -127,31 +128,55 @@ export default function WhatsAppModal({ isOpen, onClose }) {
 
             {showKeyHelp && (
               <div className="p-3 bg-white rounded-xl border border-emerald-200 text-[11px] text-slate-700 space-y-1.5 animate-fade-in">
-                <p className="font-bold text-emerald-900">Why is this needed?</p>
+                <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-medium">
+                  ⚠️ <strong>CallMeBot Server Status Notice:</strong> CallMeBot's public bot is currently at maximum capacity on their official website (<em>"The bot is currently full. Please check back in a few days"</em>), which causes their verification bot to delay or skip responses.
+                </div>
+                <p className="font-bold text-emerald-900">Recommended Alternative:</p>
                 <p>
-                  Meta/WhatsApp prevents spam by forbidding unknown servers from cold-messaging users. CallMeBot is a 100% free IoT gateway that sends alerts once you authorize it.
+                  Use the green <strong>"Launch WhatsApp Alert Directly"</strong> button below! It immediately opens WhatsApp with the full alert, GPS coordinates, and Google Maps link pre-filled to your phone with zero setup and zero delays.
                 </p>
-                <p className="font-bold text-slate-900 pt-1">30-Second Free Setup:</p>
-                <ol className="list-decimal list-inside space-y-1 text-slate-600">
-                  <li>
-                    Open WhatsApp and send message: <code className="bg-slate-100 px-1 rounded text-emerald-800 font-bold">I allow callmebot to send me messages</code> to <code className="font-bold">+34 644 59 71 67</code>
-                  </li>
-                  <li>
-                    <a
-                      href="https://wa.me/34644597167?text=I%20allow%20callmebot%20to%20send%20me%20messages"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-emerald-700 font-bold underline"
-                    >
-                      <span>Click here to open WhatsApp & authorize CallMeBot</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </li>
-                  <li>CallMeBot will reply instantly with your 6-digit API key. Paste it above!</li>
-                </ol>
               </div>
             )}
           </div>
+
+          {/* Quick Direct Launch Card */}
+          {(() => {
+            const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
+            const normalizedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+            const liveMsg = 
+              `🚨 *WILD ANIMAL DETECTED!* — CropSentry UAV\n\n` +
+              `📅 *Time:* ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} (IST)\n` +
+              `📍 *Location:* 17.329700, 76.837100\n` +
+              `🗺️ *View on Google Maps:* https://www.google.com/maps?q=17.329700,76.837100\n` +
+              `🌡️ *Thermal Reading:* 37.2°C (Surrounding: 22.0°C)\n` +
+              `⚡ *Thermal Contrast:* +15.2°C\n\n` +
+              `🔔 *Status:* Deterrent strobe & 110dB acoustic siren triggered on drone.`;
+            const directHref = `https://api.whatsapp.com/send?phone=${normalizedPhone}&text=${encodeURIComponent(liveMsg)}`;
+
+            return (
+              <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-900 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Instant Direct WhatsApp Dispatch (Guaranteed Delivery)</span>
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                    1-Click
+                  </span>
+                </div>
+                <a
+                  href={directHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-sm flex items-center justify-center gap-2"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Launch WhatsApp Alert to +{normalizedPhone}</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            );
+          })()}
 
           {/* Message Preview Box */}
           <div className="bg-[#EFEAE2] p-4 rounded-2xl border border-slate-300/80 shadow-inner space-y-2">

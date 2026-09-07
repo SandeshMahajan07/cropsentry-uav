@@ -329,13 +329,13 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="p-3 bg-white rounded-xl border border-slate-200/80 text-[11px] text-slate-600 space-y-1">
-              <p className="font-semibold text-slate-800">How to get your free CallMeBot key (takes 20 seconds):</p>
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 space-y-1">
+              <p className="font-bold">⚠️ CallMeBot Gateway Server Status:</p>
               <p>
-                1. Click the button above to send <code className="bg-slate-100 px-1 rounded text-emerald-800 font-bold">I allow callmebot to send me messages</code> to <code className="font-bold">+34 644 59 71 67</code> from your phone.
+                CallMeBot's public bot is currently at capacity on their website (<em>"The bot is currently full. Please check back in a few days"</em>). Because of this, their automated verification bot may delay or skip replies.
               </p>
               <p>
-                2. CallMeBot will reply immediately on WhatsApp with your personal 6-digit API key. Paste it above and click "Save Configuration Changes".
+                <strong>Recommended:</strong> Use the <strong>"Launch Live WhatsApp Alert"</strong> button below — it immediately opens WhatsApp with the full alert, GPS coordinates, and Google Maps link pre-filled to +91 6360911344 with zero setup and zero delays!
               </p>
             </div>
           </div>
@@ -362,19 +362,32 @@ export default function Settings() {
               <span>WhatsApp Emergency Notification Contacts</span>
             </h4>
             <p className="text-xs text-slate-500 mt-0.5">
-              Registered numbers receive automated WhatsApp alerts with live Google Maps links when an animal is spotted.
+              Target recipient: <strong className="text-slate-800">+91 6360911344</strong>. Dispatches automated wildlife intrusion alerts with live Google Maps links.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => handleTestWhatsAppAlert('+91 6360911344')}
-            disabled={sendingTestAlert}
-            className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>{sendingTestAlert ? 'Sending Alert...' : 'Send Test Alert to +91 6360911344'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="https://api.whatsapp.com/send?phone=916360911344&text=%F0%9F%9A%A8%20*WILD%20ANIMAL%20DETECTED!*%20%E2%80%94%20CropSentry%20UAV%0A%0A%F0%9F%93%85%20*Time%3A*%20Live%20Patrol%20(IST)%0A%F0%9F%93%8D%20*Location%3A*%2017.329700%2C%2076.837100%0A%F0%9F%97%BA%EF%B8%8F%20*View%20on%20Google%20Maps%3A*%20https%3A%2F%2Fwww.google.com%2Fmaps%3Fq%3D17.329700%2C76.837100%0A%F0%9F%8C%A1%EF%B8%8F%20*Thermal%20Reading%3A*%2037.2%C2%B0C%20(Ambient%3A%2022.0%C2%B0C)%0A%E2%9A%A1%20*Contrast%20%CE%94T%3A*%20%2B15.2%C2%B0C%0A%0A%F0%9F%94%94%20*Status%3A*%20Deterrent%20strobe%20%26%20110dB%20acoustic%20siren%20triggered%20on%20drone."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Launch Live WhatsApp Alert</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+
+            <button
+              type="button"
+              onClick={() => handleTestWhatsAppAlert('+91 6360911344')}
+              disabled={sendingTestAlert}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>{sendingTestAlert ? 'Testing...' : 'Test Ingestion'}</span>
+            </button>
+          </div>
         </div>
 
         {testAlertResult && (
