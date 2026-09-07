@@ -39,21 +39,65 @@ export async function sendAlert(recipient, detection, options = {}) {
 
   const waDirectLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageBody)}`;
 
-  // Priority for CallMeBot key: options.apiKey -> DB config -> process.env.CALLMEBOT_API_KEY
+  // Priority for Twilio & CallMeBot: options -> DB config -> process.env
+  let twilioSid = options.twilioSid || process.env.TWILIO_ACCOUNT_SID;
+  let twilioToken = options.twilioToken || process.env.TWILIO_AUTH_TOKEN;
+  let twilioFrom = options.twilioFrom || process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886';
   let callmebotKey = options.apiKey || process.env.CALLMEBOT_API_KEY;
-  if (!callmebotKey) {
-    try {
-      const configRow = db.prepare('SELECT callmebot_api_key FROM config WHERE callmebot_api_key IS NOT NULL AND callmebot_api_key != "" LIMIT 1').get();
-      if (configRow?.callmebot_api_key) {
-        callmebotKey = configRow.callmebot_api_key;
-      }
-    } catch (e) {
-      // ignore
+
+  try {
+    const configRow = db.prepare('SELECT callmebot_api_key, twilio_account_sid, twilio_auth_token, twilio_from_phone FROM config WHERE drone_id IS NULL LIMIT 1').get();
+    if (configRow) {
+      if (!twilioSid && configRow.twilio_account_sid) twilioSid = configRow.twilio_account_sid;
+      if (!twilioToken && configRow.twilio_auth_token) twilioToken = configRow.twilio_auth_token;
+      if (configRow.twilio_from_phone) twilioFrom = configRow.twilio_from_phone;
+      if (!callmebotKey && configRow.callmebot_api_key) callmebotKey = configRow.callmebot_api_key;
     }
+  } catch (e) {
+    // ignore
   }
 
   try {
-    if (callmebotKey) {
+    if (twilioSid && twilioToken) {
+      // Twilio WhatsApp Official Business API
+      console.log(`[WhatsApp Service] Dispatching via Twilio WhatsApp to +${cleanPhone}...`);
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
+      const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString('base64');
+      const params = new URLSearchParams({
+        From: twilioFrom.startsWith('whatsapp:') ? twilioFrom : `whatsapp:${twilioFrom}`,
+        To: `whatsapp:+${cleanPhone}`,
+        Body: messageBody
+      });
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params
+      });
+
+      const json = await resp.json();
+      console.log(`[WhatsApp Service] Twilio response (${resp.status}):`, JSON.stringify(json));
+      if (resp.ok) {
+        sendStatus = 'sent';
+        providerResponse = JSON.stringify({ 
+          provider: 'twilio', 
+          sid: json.sid, 
+          status: json.status || 'delivered', 
+          direct_link: waDirectLink 
+        });
+      } else {
+        sendStatus = 'failed';
+        providerResponse = JSON.stringify({ 
+          provider: 'twilio', 
+          error_code: json.code, 
+          error_message: json.message, 
+          direct_link: waDirectLink 
+        });
+      }
+    } else if (callmebotKey) {
       // CallMeBot WhatsApp API
       const encodedMsg = encodeURIComponent(messageBody);
       const url = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${encodedMsg}&apikey=${callmebotKey}`;
@@ -71,28 +115,6 @@ export async function sendAlert(recipient, detection, options = {}) {
         direct_link: waDirectLink,
         raw_response: text.substring(0, 300)
       });
-    } else if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-      // Twilio WhatsApp
-      const url = `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`;
-      const auth = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
-      const params = new URLSearchParams({
-        From: process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886',
-        To: `whatsapp:+${cleanPhone}`,
-        Body: messageBody
-      });
-
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: params
-      });
-
-      const json = await resp.json();
-      providerResponse = JSON.stringify({ provider: 'twilio', sid: json.sid, status: json.status, direct_link: waDirectLink });
-      if (!resp.ok) sendStatus = 'failed';
     } else {
       // High-Fidelity Alert Dispatcher & Direct WhatsApp Link Generator
       console.log(`\n================= [WHATSAPP DISPATCH] =================`);

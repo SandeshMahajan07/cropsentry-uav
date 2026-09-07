@@ -16,7 +16,10 @@ import {
   ShieldCheck,
   Key,
   HelpCircle,
-  MessageSquare
+  MessageSquare,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export default function Settings() {
@@ -26,13 +29,17 @@ export default function Settings() {
   const [testAlertResult, setTestAlertResult] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [showTwilioToken, setShowTwilioToken] = useState(false);
 
   // Config fields
   const [config, setConfig] = useState({
     alert_threshold_celsius: 8.0,
     dedup_radius_meters: 50.0,
     dedup_time_window_minutes: 10,
-    callmebot_api_key: ''
+    callmebot_api_key: '',
+    twilio_account_sid: '',
+    twilio_auth_token: '',
+    twilio_from_phone: 'whatsapp:+14155238886'
   });
 
   // Recipients
@@ -56,7 +63,10 @@ export default function Settings() {
           alert_threshold_celsius: configRes.data.alert_threshold_celsius,
           dedup_radius_meters: configRes.data.dedup_radius_meters,
           dedup_time_window_minutes: configRes.data.dedup_time_window_minutes,
-          callmebot_api_key: configRes.data.callmebot_api_key || ''
+          callmebot_api_key: configRes.data.callmebot_api_key || '',
+          twilio_account_sid: configRes.data.twilio_account_sid || '',
+          twilio_auth_token: configRes.data.twilio_auth_token || '',
+          twilio_from_phone: configRes.data.twilio_from_phone || 'whatsapp:+14155238886'
         });
       }
     } catch (err) {
@@ -83,7 +93,10 @@ export default function Settings() {
         alert_threshold_celsius: parseFloat(config.alert_threshold_celsius),
         dedup_radius_meters: parseFloat(config.dedup_radius_meters),
         dedup_time_window_minutes: parseInt(config.dedup_time_window_minutes, 10),
-        callmebot_api_key: config.callmebot_api_key?.trim() || null
+        callmebot_api_key: config.callmebot_api_key?.trim() || null,
+        twilio_account_sid: config.twilio_account_sid?.trim() || null,
+        twilio_auth_token: config.twilio_auth_token?.trim() || null,
+        twilio_from_phone: config.twilio_from_phone?.trim() || 'whatsapp:+14155238886'
       };
 
       await api.updateConfig(payload);
@@ -270,6 +283,116 @@ export default function Settings() {
               <p className="text-[11px] text-slate-500 leading-tight">
                 Duration before sending a second alert for the same patch of field.
               </p>
+            </div>
+          </div>
+
+          {/* Twilio WhatsApp Official Business Push Gateway */}
+          <div className="p-5 rounded-2xl bg-emerald-50/50 border border-emerald-200/90 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800">
+                  <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                </div>
+                <div>
+                  <h5 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                    <span>Twilio WhatsApp Cloud Gateway (Official & Direct Push)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      Recommended
+                    </span>
+                  </h5>
+                  <p className="text-[11px] text-slate-500">
+                    Industry standard provider. Uses Twilio's free WhatsApp Sandbox ($15.50 free trial credit, no credit card required).
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  config.twilio_account_sid && config.twilio_auth_token
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                    : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {config.twilio_account_sid && config.twilio_auth_token ? '● Twilio Active' : '○ Not Configured'}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Twilio Account SID
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  value={config.twilio_account_sid}
+                  onChange={(e) => setConfig({ ...config, twilio_account_sid: e.target.value })}
+                  className="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-forest-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-semibold text-slate-700">
+                    Twilio Auth Token
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTwilioToken(!showTwilioToken)}
+                    className="text-[10px] text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                  >
+                    {showTwilioToken ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showTwilioToken ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showTwilioToken ? 'text' : 'password'}
+                    placeholder="Enter Twilio Auth Token"
+                    value={config.twilio_auth_token}
+                    onChange={(e) => setConfig({ ...config, twilio_auth_token: e.target.value })}
+                    className="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-forest-600 focus:outline-none pr-8"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+              <div className="sm:col-span-8">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Twilio Sender Phone / Sandbox
+                </label>
+                <input
+                  type="text"
+                  placeholder="whatsapp:+14155238886"
+                  value={config.twilio_from_phone}
+                  onChange={(e) => setConfig({ ...config, twilio_from_phone: e.target.value })}
+                  className="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-forest-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-4 flex items-end">
+                <a
+                  href="https://console.twilio.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold text-[11px] transition flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <span>Open Twilio Console</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
+              <p className="font-semibold text-slate-900">How to activate Twilio WhatsApp in 2 Minutes:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Create a free trial account at <a href="https://www.twilio.com/try-twilio" target="_blank" rel="noopener noreferrer" className="text-emerald-700 underline font-semibold">twilio.com</a> (free $15.50 balance, no card required).</li>
+                <li>In your Twilio Console, navigate to <strong>Explore Products → Messaging → Try WhatsApp</strong>.</li>
+                <li>Send the join text (e.g. <code className="bg-slate-100 px-1 rounded text-emerald-800 font-bold">join [your-sandbox-keyword]</code>) from your phone <strong>+91 6360911344</strong> to <strong>+1 415 523 8886</strong>.</li>
+                <li>Copy your <strong>Account SID</strong> and <strong>Auth Token</strong> from the Twilio Console dashboard into the fields above, then click "Save Configuration Changes".</li>
+              </ol>
             </div>
           </div>
 

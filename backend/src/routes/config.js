@@ -49,7 +49,10 @@ router.put('/', (req, res) => {
       alert_threshold_celsius,
       dedup_radius_meters,
       dedup_time_window_minutes,
-      callmebot_api_key = undefined
+      callmebot_api_key = undefined,
+      twilio_account_sid = undefined,
+      twilio_auth_token = undefined,
+      twilio_from_phone = undefined
     } = req.body;
 
     const threshold = Number(alert_threshold_celsius);
@@ -80,35 +83,43 @@ router.put('/', (req, res) => {
         return res.status(404).json({ error: `Drone ${drone_id} does not exist` });
       }
 
-      const existing = db.prepare('SELECT id, callmebot_api_key FROM config WHERE drone_id = ?').get(drone_id);
+      const existing = db.prepare('SELECT * FROM config WHERE drone_id = ?').get(drone_id);
       const apiKeyToSave = callmebot_api_key !== undefined ? (callmebot_api_key ? callmebot_api_key.trim() : null) : existing?.callmebot_api_key;
+      const twilioSidToSave = twilio_account_sid !== undefined ? (twilio_account_sid ? twilio_account_sid.trim() : null) : existing?.twilio_account_sid;
+      const twilioTokenToSave = twilio_auth_token !== undefined ? (twilio_auth_token ? twilio_auth_token.trim() : null) : existing?.twilio_auth_token;
+      const twilioFromToSave = twilio_from_phone !== undefined ? (twilio_from_phone ? twilio_from_phone.trim() : 'whatsapp:+14155238886') : existing?.twilio_from_phone;
+
       if (existing) {
         db.prepare(`
           UPDATE config 
-          SET alert_threshold_celsius = ?, dedup_radius_meters = ?, dedup_time_window_minutes = ?, callmebot_api_key = ?, updated_at = ?
+          SET alert_threshold_celsius = ?, dedup_radius_meters = ?, dedup_time_window_minutes = ?, callmebot_api_key = ?, twilio_account_sid = ?, twilio_auth_token = ?, twilio_from_phone = ?, updated_at = ?
           WHERE drone_id = ?
-        `).run(threshold, radius, windowMins, apiKeyToSave, now, drone_id);
+        `).run(threshold, radius, windowMins, apiKeyToSave, twilioSidToSave, twilioTokenToSave, twilioFromToSave, now, drone_id);
       } else {
         db.prepare(`
-          INSERT INTO config (drone_id, alert_threshold_celsius, dedup_radius_meters, dedup_time_window_minutes, callmebot_api_key, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(drone_id, threshold, radius, windowMins, apiKeyToSave, now);
+          INSERT INTO config (drone_id, alert_threshold_celsius, dedup_radius_meters, dedup_time_window_minutes, callmebot_api_key, twilio_account_sid, twilio_auth_token, twilio_from_phone, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(drone_id, threshold, radius, windowMins, apiKeyToSave, twilioSidToSave, twilioTokenToSave, twilioFromToSave, now);
       }
     } else {
       // Global config
-      const existing = db.prepare('SELECT id, callmebot_api_key FROM config WHERE drone_id IS NULL').get();
+      const existing = db.prepare('SELECT * FROM config WHERE drone_id IS NULL').get();
       const apiKeyToSave = callmebot_api_key !== undefined ? (callmebot_api_key ? callmebot_api_key.trim() : null) : existing?.callmebot_api_key;
+      const twilioSidToSave = twilio_account_sid !== undefined ? (twilio_account_sid ? twilio_account_sid.trim() : null) : existing?.twilio_account_sid;
+      const twilioTokenToSave = twilio_auth_token !== undefined ? (twilio_auth_token ? twilio_auth_token.trim() : null) : existing?.twilio_auth_token;
+      const twilioFromToSave = twilio_from_phone !== undefined ? (twilio_from_phone ? twilio_from_phone.trim() : 'whatsapp:+14155238886') : (existing?.twilio_from_phone || 'whatsapp:+14155238886');
+
       if (existing) {
         db.prepare(`
           UPDATE config 
-          SET alert_threshold_celsius = ?, dedup_radius_meters = ?, dedup_time_window_minutes = ?, callmebot_api_key = ?, updated_at = ?
+          SET alert_threshold_celsius = ?, dedup_radius_meters = ?, dedup_time_window_minutes = ?, callmebot_api_key = ?, twilio_account_sid = ?, twilio_auth_token = ?, twilio_from_phone = ?, updated_at = ?
           WHERE drone_id IS NULL
-        `).run(threshold, radius, windowMins, apiKeyToSave, now);
+        `).run(threshold, radius, windowMins, apiKeyToSave, twilioSidToSave, twilioTokenToSave, twilioFromToSave, now);
       } else {
         db.prepare(`
-          INSERT INTO config (drone_id, alert_threshold_celsius, dedup_radius_meters, dedup_time_window_minutes, callmebot_api_key, updated_at)
-          VALUES (NULL, ?, ?, ?, ?, ?)
-        `).run(threshold, radius, windowMins, apiKeyToSave, now);
+          INSERT INTO config (drone_id, alert_threshold_celsius, dedup_radius_meters, dedup_time_window_minutes, callmebot_api_key, twilio_account_sid, twilio_auth_token, twilio_from_phone, updated_at)
+          VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(threshold, radius, windowMins, apiKeyToSave, twilioSidToSave, twilioTokenToSave, twilioFromToSave, now);
       }
     }
 

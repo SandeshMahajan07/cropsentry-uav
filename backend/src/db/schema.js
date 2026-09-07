@@ -65,18 +65,29 @@ export function initializeDatabase() {
       dedup_radius_meters REAL NOT NULL DEFAULT 50.0,
       dedup_time_window_minutes INTEGER NOT NULL DEFAULT 10,
       callmebot_api_key TEXT,
+      twilio_account_sid TEXT,
+      twilio_auth_token TEXT,
+      twilio_from_phone TEXT DEFAULT 'whatsapp:+14155238886',
       updated_at TEXT NOT NULL,
       FOREIGN KEY (drone_id) REFERENCES drones (drone_id) ON DELETE CASCADE
     );
   `);
 
-  // Safe migration for existing config table
+  // Safe migrations for existing config table
   try {
     db.exec(`ALTER TABLE config ADD COLUMN callmebot_api_key TEXT;`);
-  } catch (err) {
-    // Column already exists or table freshly created
-  }
+  } catch (err) {}
+  try {
+    db.exec(`ALTER TABLE config ADD COLUMN twilio_account_sid TEXT;`);
+  } catch (err) {}
+  try {
+    db.exec(`ALTER TABLE config ADD COLUMN twilio_auth_token TEXT;`);
+  } catch (err) {}
+  try {
+    db.exec(`ALTER TABLE config ADD COLUMN twilio_from_phone TEXT DEFAULT 'whatsapp:+14155238886';`);
+  } catch (err) {}
 
   console.log('[DB] Database tables initialized successfully.');
 }
+
 
