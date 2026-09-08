@@ -52,7 +52,7 @@ export default function Dashboard({ onSelectDetection }) {
   const handleSendTestAlert = async () => {
     try {
       setTestSent(true);
-      const res = await api.testWhatsAppAlert('+91 8073222459');
+      const res = await api.testWhatsAppAlert('+91 6360911344');
       if (res.direct_whatsapp_url) {
         window.open(res.direct_whatsapp_url, '_blank');
       }

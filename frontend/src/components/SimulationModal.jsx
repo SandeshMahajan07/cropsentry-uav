@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { api } from '../api/client';
-import { X, Send, Radio, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
+import { X, Send, Radio, AlertTriangle, CheckCircle, Zap, Crosshair, MapPin } from 'lucide-react';
 
 export default function SimulationModal({ isOpen, onClose, onIngested }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState('');
 
   const [formData, setFormData] = useState({
     drone_id: 'CROPSENTRY_01',
@@ -56,6 +58,34 @@ export default function SimulationModal({ isOpen, onClose, onIngested }) {
     });
     setResult(null);
     setError(null);
+  };
+
+  const handleUseDeviceGPS = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+    setGpsLoading(true);
+    setGpsStatus('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lng = parseFloat(pos.coords.longitude.toFixed(6));
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng
+        }));
+        setGpsLoading(false);
+        setGpsStatus(`GPS Synced: ${lat}, ${lng} (±${Math.round(pos.coords.accuracy)}m)`);
+        setTimeout(() => setGpsStatus(''), 5000);
+      },
+      (err) => {
+        setGpsLoading(false);
+        alert(`Failed to acquire GPS: ${err.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   const handleSimulate = async (e) => {
@@ -156,29 +186,49 @@ export default function SimulationModal({ isOpen, onClose, onIngested }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Latitude</label>
-              <input
-                type="number"
-                step="any"
-                value={formData.latitude}
-                onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2 focus:ring-2 focus:ring-forest-600 focus:outline-none"
-                required
-              />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-700">GPS Telemetry Coordinates</span>
+              <button
+                type="button"
+                onClick={handleUseDeviceGPS}
+                disabled={gpsLoading}
+                className="px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold flex items-center gap-1 transition disabled:opacity-50"
+              >
+                <Crosshair className={`w-3 h-3 text-blue-600 ${gpsLoading ? 'animate-spin' : ''}`} />
+                <span>{gpsLoading ? 'Reading Device GPS...' : '📍 Use My Device GPS'}</span>
+              </button>
             </div>
+            {gpsStatus && (
+              <div className="p-2 bg-blue-50/80 border border-blue-200 rounded-xl text-blue-800 text-[11px] font-semibold flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>{gpsStatus}</span>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 mb-1">Latitude (°N)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.latitude}
+                  onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                  className="w-full text-xs font-mono font-semibold rounded-xl border border-slate-200 px-3 py-2 focus:ring-2 focus:ring-forest-600 focus:outline-none"
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Longitude</label>
-              <input
-                type="number"
-                step="any"
-                value={formData.longitude}
-                onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2 focus:ring-2 focus:ring-forest-600 focus:outline-none"
-                required
-              />
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 mb-1">Longitude (°E)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.longitude}
+                  onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                  className="w-full text-xs font-mono font-semibold rounded-xl border border-slate-200 px-3 py-2 focus:ring-2 focus:ring-forest-600 focus:outline-none"
+                  required
+                />
+              </div>
             </div>
           </div>
 

@@ -54,7 +54,7 @@ export default function DetectionDetail({ detectionId, onBack }) {
   const handleResendAlert = async () => {
     try {
       setTestSent(true);
-      const res = await api.testWhatsAppAlert('+91 8073222459');
+      const res = await api.testWhatsAppAlert('+91 6360911344');
       if (res.direct_whatsapp_url) {
         window.open(res.direct_whatsapp_url, '_blank');
       }
@@ -258,7 +258,7 @@ export default function DetectionDetail({ detectionId, onBack }) {
               <div>
                 <span className="font-bold text-emerald-900">WhatsApp Alert Dispatch</span>
                 <p className="text-emerald-800 text-[11px]">
-                  Emergency alert with clickable Google Maps coordinates sent to +91 8073222459
+                  Emergency alert with clickable Google Maps coordinates sent to +91 6360911344
                 </p>
               </div>
               <button

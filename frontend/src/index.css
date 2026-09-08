@@ -32,3 +32,9 @@ body {
   margin: 8px 12px;
   line-height: 1.4;
 }
+
+/* Fix Leaflet custom div icon styling & offset */
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
